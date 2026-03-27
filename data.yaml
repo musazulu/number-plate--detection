@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['number-plates']
+
+roboflow:
+  workspace: musa-yo5p1
+  project: zimbabwe-plate-detection-ty88d
+  version: 3
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/musa-yo5p1/zimbabwe-plate-detection-ty88d/dataset/3

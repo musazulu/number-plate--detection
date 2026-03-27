@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ANPR Security Dashboard</title>
+    <meta http-equiv="refresh" content="3">
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+        }
+
+        h1 {
+            color: #00ffcc;
+        }
+
+        table {
+            margin: auto;
+            border-collapse: collapse;
+            width: 95%;
+        }
+
+        th, td {
+            border: 1px solid #00ffcc;
+            padding: 10px;
+        }
+
+        th {
+            background: #00ffcc;
+            color: black;
+        }
+
+        tr:nth-child(even) {
+            background: #1e293b;
+        }
+
+        .blacklist {
+            background-color: #7f1d1d !important;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .normal {
+            background-color: #022c22;
+        }
+
+        img {
+            border-radius: 8px;
+        }
+
+        .alert {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🚗 ANPR SECURITY DASHBOARD</h1>
+
+<table>
+    <tr>
+        <th>Image</th>
+        <th>Plate</th>
+        <th>Confidence</th>
+        <th>Time</th>
+        <th>Status</th>
+    </tr>
+
+    {% for p in plates %}
+    <tr class="{% if p[4] == 'BLACKLISTED' %}blacklist{% else %}normal{% endif %}">
+        
+        <td>
+            {% if p[3] %}
+                <img src="/snapshots/{{ p[3].split('/')[-1] }}" width="150">
+            {% else %}
+                No Image
+            {% endif %}
+        </td>
+
+        <td>{{ p[0] }}</td>
+        <td>{{ p[1] }}%</td>
+        <td>{{ p[2] }}</td>
+
+        <td>
+            {% if p[4] == "BLACKLISTED" %}
+                🚨 ALERT
+            {% else %}
+                ✅ NORMAL
+            {% endif %}
+        </td>
+
+    </tr>
+    {% endfor %}
+
+</table>
+
+</body>
+</html>
