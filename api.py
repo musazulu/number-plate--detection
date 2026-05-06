@@ -57,20 +57,23 @@ def clean_text(text):
     return text
 
 # -------------------------------
-# HOME — redirect to dashboard
+# HOME — dashboard
 # -------------------------------
 @app.route("/")
 def home():
-    conn = sqlite3.connect("plates.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT plate, confidence, timestamp, image_path, status
-        FROM plates
-        ORDER BY id DESC
-        LIMIT 50
-    """)
-    plates = cursor.fetchall()
-    conn.close()
+    try:
+        conn = sqlite3.connect("plates.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT plate, confidence, timestamp, image_path, status
+            FROM plates
+            ORDER BY id DESC
+            LIMIT 50
+        """)
+        plates = cursor.fetchall()
+        conn.close()
+    except Exception:
+        plates = []
     return render_template("index.html", plates=plates)
 
 # -------------------------------
