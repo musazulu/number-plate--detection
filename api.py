@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import cv2
 import numpy as np
 import easyocr
@@ -57,11 +57,28 @@ def clean_text(text):
     return text
 
 # -------------------------------
-# HOME
+# HOME — redirect to dashboard
 # -------------------------------
 @app.route("/")
 def home():
-    return "✅ ANPR API RUNNING"
+    conn = sqlite3.connect("plates.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT plate, confidence, timestamp, image_path, status
+        FROM plates
+        ORDER BY id DESC
+        LIMIT 50
+    """)
+    plates = cursor.fetchall()
+    conn.close()
+    return render_template("index.html", plates=plates)
+
+# -------------------------------
+# SERVE SNAPSHOTS
+# -------------------------------
+@app.route('/snapshots/<path:filename>')
+def snapshots(filename):
+    return send_from_directory('snapshots', filename)
 
 # -------------------------------
 # DETECT

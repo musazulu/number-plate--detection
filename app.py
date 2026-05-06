@@ -11,7 +11,7 @@ def get_plates():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT plate, confidence, time, image_path, status
+        SELECT plate, confidence, timestamp, image_path, status
         FROM plates 
         ORDER BY id DESC
         LIMIT 50
