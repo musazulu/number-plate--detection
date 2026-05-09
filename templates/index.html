@@ -2,7 +2,8 @@
 <html>
 <head>
     <title>ANPR Security Dashboard</title>
-    <meta http-equiv="refresh" content="3">
+    <meta http-equiv="refresh" content="10">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
         body {
@@ -10,21 +11,67 @@
             background: #0f172a;
             color: white;
             text-align: center;
+            padding: 10px;
         }
 
         h1 {
             color: #00ffcc;
+            font-size: 1.4em;
         }
 
+        /* Upload Form */
+        .upload-box {
+            background: #1e293b;
+            border: 2px dashed #00ffcc;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 500px;
+        }
+
+        .upload-box input[type="file"] {
+            display: block;
+            margin: 10px auto;
+            color: white;
+        }
+
+        .upload-box button {
+            background: #00ffcc;
+            color: black;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .upload-box button:hover {
+            background: #00ccaa;
+        }
+
+        #result {
+            margin-top: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .result-normal { color: #00ffcc; }
+        .result-blacklisted { color: #ff4444; }
+
+        /* Table */
         table {
             margin: auto;
             border-collapse: collapse;
-            width: 95%;
+            width: 100%;
+            max-width: 1000px;
         }
 
         th, td {
             border: 1px solid #00ffcc;
-            padding: 10px;
+            padding: 8px;
+            font-size: 0.9em;
         }
 
         th {
@@ -48,11 +95,7 @@
 
         img {
             border-radius: 8px;
-        }
-
-        .alert {
-            color: red;
-            font-weight: bold;
+            max-width: 120px;
         }
     </style>
 </head>
@@ -60,6 +103,55 @@
 
 <h1>🚗 ANPR SECURITY DASHBOARD</h1>
 
+<!-- UPLOAD / CAMERA FORM -->
+<div class="upload-box">
+    <p style="color:#00ffcc; font-weight:bold;">📷 Test Plate Detection</p>
+    <input type="file" id="imageInput" accept="image/*" capture="environment">
+    <button onclick="sendImage()">🔍 Detect Plate</button>
+    <div id="result"></div>
+</div>
+
+<script>
+async function sendImage() {
+    const input = document.getElementById('imageInput');
+    const resultDiv = document.getElementById('result');
+
+    if (!input.files[0]) {
+        resultDiv.innerHTML = '<span style="color:orange">⚠️ Please select an image first</span>';
+        return;
+    }
+
+    resultDiv.innerHTML = '⏳ Detecting...';
+
+    const formData = new FormData();
+    formData.append('image', input.files[0]);
+
+    try {
+        const response = await fetch('/detect', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.status === 'BLACKLISTED') {
+            resultDiv.innerHTML = `<span class="result-blacklisted">🚨 BLACKLISTED: ${data.plate}</span>`;
+        } else if (data.status === 'NORMAL') {
+            resultDiv.innerHTML = `<span class="result-normal">✅ DETECTED: ${data.plate}</span>`;
+        } else {
+            resultDiv.innerHTML = `<span style="color:orange">⚠️ ${data.plate}</span>`;
+        }
+
+        // Reload page after 3 seconds to show new entry in table
+        setTimeout(() => location.reload(), 3000);
+
+    } catch (err) {
+        resultDiv.innerHTML = '<span style="color:red">❌ Error connecting to server</span>';
+    }
+}
+</script>
+
+<!-- DETECTIONS TABLE -->
+<h2 style="color:#00ffcc; margin-top:30px;">Recent Detections</h2>
 <table>
     <tr>
         <th>Image</th>
@@ -74,14 +166,14 @@
         
         <td>
             {% if p[3] %}
-                <img src="/snapshots/{{ p[3].split('/')[-1] }}" width="150">
+                <img src="/snapshots/{{ p[3].split('/')[-1] }}" width="120">
             {% else %}
                 No Image
             {% endif %}
         </td>
 
         <td>{{ p[0] }}</td>
-        <td>{{ p[1] }}%</td>
+        <td>{{ "%.0f"|format(p[1] * 100) }}%</td>
         <td>{{ p[2] }}</td>
 
         <td>
