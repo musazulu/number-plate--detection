@@ -13,8 +13,21 @@ app = Flask(__name__)
 # -------------------------------
 # SETUP
 # -------------------------------
-model = YOLO("runs/detect/train/weights/best.pt")
-reader = easyocr.Reader(['en'], gpu=False)
+MODEL_PATH = "runs/detect/train/weights/best.pt"
+_model = None
+_reader = None
+
+def get_model():
+    global _model
+    if _model is None:
+        _model = YOLO(MODEL_PATH)
+    return _model
+
+def get_reader():
+    global _reader
+    if _reader is None:
+        _reader = easyocr.Reader(['en'], gpu=False)
+    return _reader
 
 # 🚨 BLACKLIST
 BLACKLIST = [
@@ -89,6 +102,9 @@ def snapshots(filename):
 @app.route('/detect', methods=['POST'])
 def detect():
     try:
+        model = get_model()
+        reader = get_reader()
+
         file = request.files['image'].read()
         npimg = np.frombuffer(file, np.uint8)
         frame = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
