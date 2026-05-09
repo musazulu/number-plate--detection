@@ -11,23 +11,24 @@ from ultralytics import YOLO
 app = Flask(__name__)
 
 # -------------------------------
-# SETUP
+# SETUP — load model at startup
 # -------------------------------
 MODEL_PATH = "runs/detect/train/weights/best.pt"
-_model = None
-_reader = None
+model = None
+reader = None
 
-def get_model():
-    global _model
-    if _model is None:
-        _model = YOLO(MODEL_PATH)
-    return _model
+def load_models():
+    global model, reader
+    if os.path.exists(MODEL_PATH):
+        print("==> Loading YOLO model...")
+        model = YOLO(MODEL_PATH)
+        print("==> Loading EasyOCR...")
+        reader = easyocr.Reader(['en'], gpu=False)
+        print("==> Models loaded successfully.")
+    else:
+        print(f"⚠️ Model not found at {MODEL_PATH}. Detection will be unavailable.")
 
-def get_reader():
-    global _reader
-    if _reader is None:
-        _reader = easyocr.Reader(['en'], gpu=False)
-    return _reader
+load_models()
 
 # 🚨 BLACKLIST
 BLACKLIST = [
@@ -70,6 +71,13 @@ def clean_text(text):
     return text
 
 # -------------------------------
+# HEALTH CHECK
+# -------------------------------
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok", "model_loaded": model is not None})
+
+# -------------------------------
 # HOME — dashboard
 # -------------------------------
 @app.route("/")
@@ -101,10 +109,9 @@ def snapshots(filename):
 # -------------------------------
 @app.route('/detect', methods=['POST'])
 def detect():
+    if model is None or reader is None:
+        return jsonify({"plate": "Model not loaded", "status": "ERROR"})
     try:
-        model = get_model()
-        reader = get_reader()
-
         file = request.files['image'].read()
         npimg = np.frombuffer(file, np.uint8)
         frame = cv2.imdecode(npimg, cv2.IMREAD_COLOR)

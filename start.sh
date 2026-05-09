@@ -15,5 +15,5 @@ else
     echo "==> Model already exists, skipping download."
 fi
 
-# Start the app
-exec gunicorn api:app
+# Start the app with longer timeout for model loading
+exec gunicorn api:app --timeout 120 --workers 1
