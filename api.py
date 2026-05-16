@@ -11,7 +11,7 @@ from ultralytics import YOLO
 app = Flask(__name__)
 
 # -------------------------------
-# SETUP — load model at startup
+# SETUP — load models at startup
 # -------------------------------
 MODEL_PATH = "runs/detect/train/weights/best.pt"
 model = None
@@ -30,12 +30,14 @@ def load_models():
 
 load_models()
 
-# 🚨 BLACKLIST
+# -------------------------------
+# BLACKLIST
+# -------------------------------
 BLACKLIST = [
     "AEJ 7544",
     "ADT 9282",
     "ADX 3291",
-    "AHG 9615"   # test plate
+    "AHG 9615"
 ]
 
 # Ensure snapshots folder exists
@@ -46,7 +48,6 @@ os.makedirs("snapshots", exist_ok=True)
 # -------------------------------
 conn = sqlite3.connect("plates.db")
 cursor = conn.cursor()
-
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS plates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +58,6 @@ CREATE TABLE IF NOT EXISTS plates (
     status TEXT
 )
 """)
-
 conn.commit()
 conn.close()
 
@@ -124,7 +124,6 @@ def detect():
 
             for box, conf in zip(boxes, confs):
                 x1, y1, x2, y2 = map(int, box)
-
                 plate_img = frame[y1:y2, x1:x2]
 
                 if plate_img.size == 0:
@@ -132,13 +131,14 @@ def detect():
 
                 gray = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
                 gray = cv2.resize(gray, None, fx=3, fy=3)
+                gray = cv2.convertScaleAbs(gray, alpha=1.5, beta=25)
+                gray = cv2.GaussianBlur(gray, (3, 3), 0)
 
                 text = "".join(reader.readtext(
                     gray,
                     detail=0,
                     allowlist='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
                 ))
-
                 text = clean_text(text)
 
                 match = re.search(r'[A-Z]{3}[0-9]{4}', text)
@@ -146,57 +146,32 @@ def detect():
                 if match:
                     plate = match.group()
                     plate = plate[:3] + " " + plate[3:]
-
                     print("✅ DETECTED:", plate)
 
-                    # 🚨 CHECK BLACKLIST
                     status = "NORMAL"
                     if plate in BLACKLIST:
                         status = "BLACKLISTED"
                         print("🚨 ALERT! BLACKLISTED:", plate)
 
-                    # -------------------------------
-                    # SAVE IMAGE
-                    # -------------------------------
                     filename = f"snapshots/{plate}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
                     cv2.imwrite(filename, plate_img)
 
-                    # -------------------------------
-                    # SAVE TO DB
-                    # -------------------------------
                     conn = sqlite3.connect("plates.db")
                     cursor = conn.cursor()
-
                     cursor.execute("""
                         INSERT INTO plates (plate, confidence, timestamp, image_path, status)
                         VALUES (?, ?, ?, ?, ?)
-                    """, (
-                        plate,
-                        float(conf),
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        filename,
-                        status
-                    ))
-
+                    """, (plate, float(conf), datetime.now().strftime("%Y-%m-%d %H:%M:%S"), filename, status))
                     conn.commit()
                     conn.close()
 
-                    return jsonify({
-                        "plate": plate,
-                        "status": status
-                    })
+                    return jsonify({"plate": plate, "status": status})
 
-        return jsonify({
-            "plate": "No plate detected",
-            "status": "NONE"
-        })
+        return jsonify({"plate": "No plate detected", "status": "NONE"})
 
     except Exception as e:
         print("🔥 ERROR:", str(e))
-        return jsonify({
-            "plate": "Error processing image",
-            "status": "ERROR"
-        })
+        return jsonify({"plate": "Error processing image", "status": "ERROR"})
 
 # -------------------------------
 # RUN
